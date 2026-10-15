@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hệ thống Tra cứu & Quản lý Tài khoản Trực tuyến - CTU</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Supabase JS Client CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="bg-blue-800 text-white shadow-md sticky top-0 z-40">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 bg-white text-blue-800 rounded-full flex items-center justify-center font-bold text-xl shadow">
+                    CTU
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold leading-tight">HỆ THỐNG TRA CỨU TÀI KHOẢN TRỰC TUYẾN</h1>
+                    <p class="text-xs text-blue-200">Đại học Cần Thơ - Can Tho University</p>
+                </div>
+            </div>
+            <!-- Secret Trigger / Key Login Button -->
+            <button id="adminAccessBtn" class="text-xs text-blue-300 hover:text-white px-3 py-1.5 rounded transition border border-transparent hover:border-blue-400">
+                <i class="fa-solid fa-lock mr-1"></i> Quản trị
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-6xl w-full mx-auto px-4 py-8">
+
+        <!-- Banner / Intro -->
+        <div class="mb-8 text-center max-w-2xl mx-auto">
+            <h2 class="text-2xl md:text-3xl font-extrabold text-slate-900 mb-2">Tra Cứu Trạng Thái Tài Khoản Sinh Viên</h2>
+            <p class="text-slate-600 text-sm md:text-base">
+                Nhập địa chỉ Gmail sinh viên thuộc tên miền <span class="font-semibold text-blue-700">@student.ctu.edu.vn</span> để kiểm tra trạng thái kích hoạt và thông tin tài khoản.
+            </p>
+        </div>
+
+        <!-- SEARCH SECTION (Public View) -->
+        <section id="searchSection" class="max-w-xl mx-auto bg-white p-6 md:p-8 rounded-2xl shadow-lg border border-slate-100">
+            <form id="searchForm" onsubmit="event.preventDefault(); handleSearch();" class="space-y-4">
+                <div>
+                    <label for="studentEmail" class="block text-sm font-medium text-slate-700 mb-1">
+                        <i class="fa-solid fa-envelope text-blue-600 mr-1"></i> Email sinh viên CTU
+                    </label>
+                    <div class="relative">
+                        <input type="email" id="studentEmail" required
+                            placeholder="vd: thongb2605470@student.ctu.edu.vn"
+                            class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-blue-600 focus:border-blue-600 transition shadow-sm outline-none pl-10 text-sm">
+                        <i class="fa-solid fa-at absolute left-3.5 top-3.5 text-slate-400"></i>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-1">Lưu ý: Chỉ chấp nhận đuôi email @student.ctu.edu.vn</p>
+                </div>
+
+                <button type="submit" id="searchBtn"
+                    class="w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-3 px-6 rounded-xl shadow-md transition duration-200 flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <span>Tra Cứu Ngay</span>
+                </button>
+            </form>
+
+            <!-- Result Display Box -->
+            <div id="searchResult" class="mt-6 hidden">
+                <!-- Result content generated dynamically -->
+            </div>
+        </section>
+
+        <!-- ADMIN DASHBOARD SECTION (Hidden by Default) -->
+        <section id="adminSection" class="hidden space-y-6">
+            <!-- Admin Top Bar -->
+            <div class="bg-white p-6 rounded-2xl shadow-md border border-slate-100 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="bg-emerald-100 text-emerald-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                            <i class="fa-solid fa-shield-halved mr-1"></i> Đã xác thực Quản trị
+                        </span>
+                        <h2 class="text-xl font-bold text-slate-800">Bảng Điều Khiển Quản Trị (Admin Dashboard)</h2>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-1">Quản lý, phê duyệt và đồng bộ dữ liệu tài khoản với Supabase Cloud DB.</p>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="openAddModal()" class="bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-xl text-sm font-medium shadow-sm flex items-center gap-1.5 transition">
+                        <i class="fa-solid fa-plus"></i> Thêm Tài Khoản
+                    </button>
+                    <button onclick="logoutAdmin()" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition flex items-center gap-1.5">
+                        <i class="fa-solid fa-right-from-bracket"></i> Thoát
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Overview -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Tổng tài khoản</p>
+                        <h3 id="statTotal" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="p-3 bg-blue-50 text-blue-600 rounded-lg"><i class="fa-solid fa-users text-lg"></i></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Đã phê duyệt</p>
+                        <h3 id="statActive" class="text-2xl font-bold text-emerald-600">0</h3>
+                    </div>
+                    <div class="p-3 bg-emerald-50 text-emerald-600 rounded-lg"><i class="fa-solid fa-circle-check text-lg"></i></div>
+                </div>
+                <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-medium">Chờ duyệt / Khóa</p>
+                        <h3 id="statPending" class="text-2xl font-bold text-amber-600">0</h3>
+                    </div>
+                    <div class="p-3 bg-amber-50 text-amber-600 rounded-lg"><i class="fa-solid fa-clock text-lg"></i></div>
+                </div>
+            </div>
+
+            <!-- Data Table -->
+            <div class="bg-white rounded-2xl shadow-md border border-slate-100 overflow-hidden">
+                <div class="p-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between gap-3 items-center bg-slate-50/50">
+                    <div class="relative w-full sm:w-72">
+                        <input type="text" id="adminSearchInput" onkeyup="filterAdminTable()" placeholder="Tìm theo tên, MSSV, email..." 
+                            class="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+                        <i class="fa-solid fa-search absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                    </div>
+                    <button onclick="loadAccounts()" class="text-slate-600 hover:text-blue-700 text-xs font-medium flex items-center gap-1">
+                        <i class="fa-solid fa-rotate-right"></i> Làm mới dữ liệu
+                    </button>
+                </div>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600 uppercase text-[11px] font-semibold tracking-wider">
+                                <th class="py-3 px-4">MSSV</th>
+                                <th class="py-3 px-4">Họ và Tên</th>
+                                <th class="py-3 px-4">Email Sinh Viên</th>
+                                <th class="py-3 px-4">Lớp / Ngành</th>
+                                <th class="py-3 px-4">Trạng Thái</th>
+                                <th class="py-3 px-4 text-center">Thao Tác</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accountsTableBody" class="divide-y divide-slate-100 text-slate-700">
+                            <!-- Rows loaded via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL 1: Admin Key Authentication Modal -->
+    <div id="authModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 relative">
+            <button onclick="closeAuthModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-12 h-12 bg-blue-100 text-blue-700 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i class="fa-solid fa-key text-xl"></i>
+                </div>
+                <h3 class="text-lg font-bold text-slate-800">Xác thực Quyền Quản trị</h3>
+                <p class="text-xs text-slate-500 mt-1">Vui lòng nhập Admin Key để truy cập khu vực quản lý hệ thống.</p>
+            </div>
+            <form onsubmit="event.preventDefault(); verifyAdminKey();" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1">Khóa Quản Trị (Admin Key)</label>
+                    <input type="password" id="adminKeyInput" placeholder="Nhập khóa bảo mật..." required
+                        class="w-full px-4 py-2.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                    <p id="authError" class="text-xs text-red-500 mt-1.5 hidden"></p>
+                </div>
+                <button type="submit" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-medium py-2.5 rounded-xl text-sm transition">
+                    Xác Nhận Truy Cập
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Add / Edit Account Modal -->
+    <div id="accountModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-100 relative">
+            <button onclick="closeAccountModal()" class="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+            <h3 id="modalTitle" class="text-lg font-bold text-slate-800 mb-4">Thêm Tài Khoản Mới</h3>
+            
+            <form id="accountForm" onsubmit="event.preventDefault(); saveAccount();" class="space-y-4">
+                <input type="hidden" id="editAccountId">
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Mã Số Sinh Viên (MSSV)</label>
+                        <input type="text" id="inputMssv" required placeholder="vd: B2605470"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Họ và Tên</label>
+                        <input type="text" id="inputFullName" required placeholder="vd: Phạm Minh Thông"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Email Sinh Viên (@student.ctu.edu.vn)</label>
+                    <input type="email" id="inputEmail" required placeholder="thongb2605470@student.ctu.edu.vn"
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Lớp / Ngành Học</label>
+                        <input type="text" id="inputClass" placeholder="vd: Công nghệ thông tin K48"
+                            class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-700 mb-1">Trạng Thái Tài Khoản</label>
+                        <select id="inputStatus" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none bg-white">
+                            <option value="Đã phê duyệt">Đã phê duyệt (Active)</option>
+                            <option value="Chờ xử lý">Chờ xử lý (Pending)</option>
+                            <option value="Tạm khóa">Tạm khóa (Blocked)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-medium text-slate-700 mb-1">Ghi chú thêm</label>
+                    <textarea id="inputNote" rows="2" placeholder="Ghi chú hệ thống..."
+                        class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-600 outline-none"></textarea>
+                </div>
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <button type="button" onclick="closeAccountModal()" class="px-4 py-2 border border-slate-300 rounded-xl text-slate-600 text-sm hover:bg-slate-50 transition">Hủy</button>
+                    <button type="submit" class="px-5 py-2 bg-blue-700 hover:bg-blue-800 text-white rounded-xl text-sm font-medium shadow-sm transition">Lưu Thay Đổi</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="bg-slate-900 text-slate-400 py-6 text-center text-xs border-t border-slate-800 mt-auto">
+        <div class="max-w-6xl mx-auto px-4 space-y-1">
+            <p class="font-semibold text-slate-300">Báo Cáo Dự Án Vòng Lặp Phát Triển | Học kỳ 1 (2026-2027)</p>
+            <p>Thành viên thực hiện: <span class="text-blue-400">PHẠM MINH THÔNG (B2605470)</span> & <span class="text-blue-400">PHẠM DUY THÁI (B2605464)</span> - CanTho University</p>
+            <p class="text-slate-500 pt-1">Công nghệ: GitHub Pages (Frontend) & Supabase (Cloud Database)</p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
